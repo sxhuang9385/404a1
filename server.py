@@ -33,41 +33,36 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        #self.request.sendall(bytearray("OK",'utf-8'))
-
 
         #split data to ge the arguments
         string_list = self.data.decode("utf-8").split(" ")
+
         #get method and path
         method = string_list[0]
         path = string_list[1]
 
-        path = path.lstrip('/')
+        #if the end of the path is '/' 
+        if (path[-1] == '/'):
+            path += "index.html"
         path = 'www/' + path
-        path += "index.html"
 
         if method == "GET":
             try:
-                file = open(path, "rb")
-                content = file.read().encode()
+                file = open(path, "r")
+                string = ""
+                string = file.read().encode()
                 mimetype = mimetypes.guess_type(path)[0]
-                response = "HTTP/1.1 200 OK\nContent-Type: {0}\r\n".format(mimetype) 
-            except FileNotFoundError: #needs work
-                Error_Msg = "404 Not Found\r\n\n"
-                response = "<html><body><center><h3>Error 404: File not found</h3></body></html>\r\n".encode('utf-8')
-            except IsADirectoryError: #needs work
-                Error_Msg = "301 Moved Permanently\r\n\n"
-        #if method isn't "GET"
+                response = "HTTP/1.1 200 OK\nContent-Type: " + mimetype + "\r\n" 
+            except FileNotFoundError:
+                response = "HTTP/1.1 404 Path Not Found\r\n\n"
+            except IsADirectoryError:
+                response = "HTTP/1.1 301 Moved Permanently\r\n"
+        #if method isn't "GET" we can't run it
         else:
-            Error_Msg = 'HTTP/1.1 405 Method Not Allowed\r\n'
-            final = Error_Msg.encode('utf-8')
-            self.request.sendall(final)
-            return
-        
-        #send response
-        final = final.encode()
-        final = final + response
-        self.request.sendall(final)
+            response = 'HTTP/1.1 405 Method Not Allowed\r\n'
+            self.request.sendall(response.encode('utf-8'))
+
+        self.request.sendall(response.encode())
 
 
 if __name__ == "__main__":
@@ -80,4 +75,3 @@ if __name__ == "__main__":
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
-
